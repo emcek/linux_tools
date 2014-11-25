@@ -1,0 +1,82 @@
+#!/bin/bash
+MEMSIZE=$1
+mounted=false
+RC=1
+PRETEND=0
+WORLD=0
+
+. /etc/portage/make.conf
+. /etc/init.d/functions.sh
+
+if [ -z "$PORTAGE_TMPDIR" ]; then
+  PORTAGE_TMPDIR="/var/tmp/portage"
+fi
+
+
+mounttmpfs() {
+  ebegin "Mounting $MEMSIZE of memory to ${PORTAGE_TMPDIR}"
+  mount -t tmpfs -o size=$MEMSIZE,nr_inodes=1M tmpfs ${PORTAGE_TMPDIR}
+  mounted="true"
+  eend $?
+}
+
+compile() {
+  einfo "running emerge $2 $3 $4 $5 $6 $7 $8 $9"
+  emerge $2 $3 $4 $5 $6 $7 $8 $9
+  #${*}
+  RC=$?
+}
+
+unmounttmpfs() {
+  ebegin "Unmounting $MEMSIZE of memory to ${PORTAGE_TMPDIR}"
+  umount -f ${PORTAGE_TMPDIR}
+  eend $?
+}
+
+remounttmpfs() {
+  ebegin "Remounting $MEMSIZE of memory to ${PORTAGE_TMPDIR}"
+  umount -f ${PORTAGE_TMPDIR}
+  mount -t tmpfs -o size=$MEMSIZE,nr_inodes=1M tmpfs ${PORTAGE_TMPDIR}
+  mounted="true"
+  eend $?
+}
+
+if [ -z "$(pgrep -f /usr/bin/emerge)" ];then
+  if [ -z "$(mount | grep ${PORTAGE_TMPDIR})" ];then
+    mounttmpfs
+  else
+    #eerror "tmpfs already mounted!"
+    #unmounttmpfs
+    remounttmpfs
+  fi
+else
+  eerror "emerge already running!"
+  exit 0
+fi
+
+# the next line would change the cpu-governour, if available, to the highest frequency
+#[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ] && echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+# run emerge
+compile $@
+if [[ "$2" == *p* ]] || [[ "$2" == *f* ]]; then
+  PRETEND=1
+fi
+if [[ "$3" == *world* ]] || [[ "$4" == *world* ]]; then
+  WORLD=1
+fi
+
+# unmount tmpfs
+if $mounted; then
+  unmounttmpfs
+fi
+
+# and set the scheduler back to "ondemand"
+#[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ] && echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+# Clearing emerge log
+if [ $RC -eq 0 ] && [ $PRETEND -eq 0 ] && [ $WORLD -eq 1 ]; then
+  einfo "Clearing emerge log"
+  date > ~emc/logs/emerge.data.log
+  echo "Total: 0 packages, Size of downloads: 0 kB" >> ~emc/logs/emerge.data.log
+fi
