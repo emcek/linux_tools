@@ -1,0 +1,46 @@
+#!/bin/bash
+
+USER=emc
+HOME=/home/emc
+SERVER="192.168.4.100"
+PING=0
+
+test_ping() {
+	PING=`ping -W1 -c1 flap | grep "received" | cut -d" " -f4 2> /dev/null`
+	echo "test ping"
+	if ! [[ "$PING" =~ ^[0-9]+$ ]]; then
+		PING=0
+	fi
+	echo "$PING from test"
+}
+do_mount () {
+	mount -a -t nfs,nfs4
+}
+
+LAN=`wlan_ip out`
+echo $LAN
+echo "starting"
+if [[ "$LAN" =~ 192.168.4.* ]] ; then
+	echo "LAN"
+	test_ping
+fi
+
+if [ $PING -eq 1 ]; then
+	do_mount
+	echo "0"
+else
+       	for i in {1..12}
+       	do
+               	sleep 1
+		echo "tessting"
+		test_ping
+       		if [ $PING -eq 1 ]; then
+			echo "mount"
+			do_mount
+       	        	echo "0"
+			exit
+		fi
+	done
+	echo "No internet connection!"
+	echo "1"
+fi
