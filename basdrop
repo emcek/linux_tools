@@ -1,0 +1,76 @@
+#!/sbin/runscript
+# Copyright 1999-2014 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# $Header: $
+
+USER=emc
+HOME=/home/emc
+LOGFILE1=$HOME/logs/wlan_ip_$HOSTNAME.log
+LOGFILE2=$HOME/Dropbox/Tools/wlan_ip_$HOSTNAME.log
+LOG_REMOTE=`/usr/local/sbin/dropbox_uploader.sh list Tools | grep wlan_ip_$HOSTNAME.log | wc -l`
+SERVER="89.16.167.134"
+SERVER2="89.16.167.13"
+SERVER1="www.gentoo.org"
+PING=0
+
+depend() {
+  need vnc #local
+  #use net
+}
+
+start() {
+  ebegin "Starting BASH Dropbox"
+  start-stop-daemon --start --quiet --exec /bin/echo
+  PING=`/usr/local/sbin/test_ping`
+  if [ $PING -eq 1 ]; then
+    /bin/ifconfig wlan0 | grep broadcast | sed -e 's/^ *//' | cut -d" "  -f2 > $HOME/logs/wlan_ip_$HOSTNAME.log
+    chown emc:users $HOME/logs/wlan_ip_$HOSTNAME.log
+    /usr/local/sbin/dropbox_uploader.sh -q upload $HOME/logs/wlan_ip_$HOSTNAME.log Tools >/dev/null
+    #echo "started"
+  else
+    for i in {1..120}
+    do
+      sleep 1
+      PING=`/usr/local/sbin/test_ping`
+      #echo $i
+      #/bin/ip -f inet addr
+      if [ $PING -eq 1 ]; then
+        /bin/ifconfig wlan0 | grep broadcast | sed -e 's/^ *//' | cut -d" "  -f2 > $HOME/logs/wlan_ip_$HOSTNAME.log
+        chown emc:users $HOME/logs/wlan_ip_$HOSTNAME.log
+        /usr/local/sbin/dropbox_uploader.sh -q upload $HOME/logs/wlan_ip_$HOSTNAME.log Tools >/dev/null
+        echo $i
+        # echo "started inside"
+        exit
+      fi
+    done
+    echo "No internet connection!"
+  fi
+  #start-stop-daemon --start --background --user emc --exec /usr/local/sbin/upload_ip
+  eend $?
+}
+
+stop() {
+  ebegin "Stopping BASH Dropbox"
+  #start-stop-daemon --stop --quiet --exec /bin/echo
+  #/usr/local/sbin/dropbox_uploader.sh -q delete Tools/wlan_ip_$HOSTNAME.log >/dev/null
+  if [ $LOG_REMOTE -eq 1 ]; then
+    #echo "remote delete"
+    #echo $LOG_REMOTE
+    /usr/local/sbin/dropbox_uploader.sh -q delete Tools/wlan_ip_$HOSTNAME.log >/dev/null
+  fi
+        if [ -f $LOGFILE1 ]; then
+    #echo "local delete"
+    rm $LOGFILE1 >/dev/null
+  fi
+
+  eend $?
+}
+
+status() {
+  #echo $LOG_REMOTE
+  if [ -f $LOGFILE1 ] && [ $LOG_REMOTE -eq 1 ]; then
+    einfo "BASH Dropbox is running."
+  else
+    einfo "BASH Dropbox is not running."
+  fi
+}
