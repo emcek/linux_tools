@@ -1,0 +1,32 @@
+#!/bin/bash
+
+USER=emc
+HOME=/home/emc
+SERVER="89.16.167.134"
+SERVER2="89.16.167.13"
+SERVER1="www.gentoo.org"
+PING=`test_ping`
+
+doupload() {
+	#wlan_ip && $HOME/bin/dropbox_uploader.sh upload $HOME/logs/wlan_ip_$HOSTNAME.log Tools &>/dev/null
+	wlan_ip && dropbox_uploader.sh upload $HOME/logs/wlan_ip_$HOSTNAME.log Tools &>/dev/null
+	#echo " $HOME/logs/wlan_ip_$HOSTNAME.log"
+}
+
+if [ $PING -eq 1 ]; then
+	doupload
+	echo "0"
+else
+       	for i in {1..25}
+       	do
+               	sleep 1
+		PING=`test_ping`
+       		if [ $PING -eq 1 ]; then
+			doupload
+       	        	echo "0"
+			exit
+		fi
+	done
+	#echo "No internet connection!"
+	echo "1"
+fi
