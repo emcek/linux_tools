@@ -1,0 +1,14 @@
+#!/bin/bash
+
+USER=emc
+HOME=/home/emc
+SERVER="89.16.167.134"
+SERVER2="89.16.167.13"
+SERVER1="www.gentoo.org"
+
+PING=`ping -W1 -c1 $SERVER | grep "received" | cut -d" " -f4`
+if ! [[ "$PING" =~ ^[0-9]+$ ]] ; then
+	PING=0
+fi
+
+echo $PING
