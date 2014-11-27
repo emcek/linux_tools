@@ -1,0 +1,31 @@
+#!/bin/bash
+
+data1="$(tac ~emc/logs/emerge.data.log |\
+grep 'Total' |\
+head |\
+sed -e 's/.*(//' |\
+sed -e 's/).*//' |\
+sed -e 's/upgrade/Up/' |\
+sed -e 's/in new slot/NS/' |\
+sed -e 's/new/N/' |\
+sed -e 's/downgrade/D/' |\
+sed -e 's/reinstall/R/' |\
+sed -e 's/uninstall/Un/' 2>/dev/null)"
+
+data2="$(tac ~emc/logs/emerge.data.log |\
+grep 'Conflict' |\
+head |\
+sed -e 's/Conflict: //' |\
+sed -e 's/block.*/B/' 2>/dev/null)"
+
+data=$data1", "$data2
+#| head -n 1
+
+if [ "$data" == "Total: 0 packages, Size of downloads: 0 kB, " ]; then
+	echo "None"
+elif [ "$data" == ", " ]; then
+	echo "Calculating..."
+else
+	echo "$data"
+fi
+

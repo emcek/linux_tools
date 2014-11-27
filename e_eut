@@ -1,0 +1,18 @@
+#!/bin/bash
+
+data="$(tac ~emc/logs/emerge.data.log |\
+grep 'Estimated' |\
+head |\
+sed -e 's/.*: //' |\
+sed -e 's/\.//' |\
+sed -e 's/hour./h/' |\
+sed -e 's/minutes/min/' 2>/dev/null)"
+
+#| head -n 1
+
+if [ -z "$data" ]; then
+	echo "Unknown"
+else
+	echo "$data"
+fi
+

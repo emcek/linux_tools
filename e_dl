@@ -1,0 +1,17 @@
+#!/bin/bash
+
+data="$(tac ~emc/logs/emerge.data.log |\
+grep 'Total' |\
+head |\
+sed -e 's/.*: //' 2>/dev/null)"
+
+#| head -n 1
+
+if [ "$data" = "0 kB" ]; then
+	echo "None"
+elif [ -z "$data" ]; then
+	echo "Calculating..."
+else
+	echo "$data"
+fi
+
